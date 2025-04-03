@@ -1,6 +1,3 @@
-index:
-  #theme: src/theme/theme_kaizen.css
-  title: Slides
 slides:
   theme: "white"  # custom CSS filepath/URL, or https://revealjs.com/themes/
   highlight_theme: "stackoverflow-light"  # custom CSS filepath/URL, or https://highlightjs.org/examples
