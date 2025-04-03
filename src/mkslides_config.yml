@@ -1,0 +1,12 @@
+index:
+  #theme: src/theme/theme_kaizen.css
+  title: Slides
+slides:
+  theme: "white"  # custom CSS filepath/URL, or https://revealjs.com/themes/
+  highlight_theme: "stackoverflow-light"  # custom CSS filepath/URL, or https://highlightjs.org/examples
+revealjs:  # https://revealjs.com/config/
+  height: 1080
+  width: 1920
+  navigationMode: linear
+  slideNumber: true
+  transition: slide
