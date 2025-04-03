@@ -18,7 +18,7 @@ jobs:
       - name: Build the pages
         run: |
           ./build.bash
-          cp -r archive/public/* public
+          cp -r archive/public/. public
       - name: Upload build result
         uses: actions/upload-pages-artifact@v3  # official action from GitHub, no pinning required
         with:
