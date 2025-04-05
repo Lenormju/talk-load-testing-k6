@@ -42,9 +42,10 @@
 * juste un binaire (Go) == installation facile  <!-- .element: class="fragment" -->
 * v1.0 toute récente  <!-- .element: class="fragment" -->
 * Javascript 😱 (ou TypeScript 🥸)  <!-- .element: class="fragment" -->
-  * transpilé en Go 🦫  <!-- .element: class="fragment" -->
 * exécuter une fonction en parallèle + en boucle  <!-- .element: class="fragment" -->
 * stats pendant et à la fin  <!-- .element: class="fragment" -->
+* pourquoi pas JMeter ? Java 🤮  <!-- .element: class="fragment" -->
+* pourquoi pas Locust ? Python + perf + stats 😥  <!-- .element: class="fragment" -->
 
 ---
 
@@ -143,34 +144,166 @@ vus_max........................: 1      min=1       max=1
 
 ## Metrics, checks, thresholds
 
-* built-in (vus précédemment)
-* custom :
-  * counter
-  * gauge
-  * rate
-  * trend
-* real-time ou summary à la fin
+* built-in (vus précédemment)  <!-- .element: class="fragment" -->
+* custom :  <!-- .element: class="fragment" -->
+  * counter  <!-- .element: class="fragment" -->
+  * gauge  <!-- .element: class="fragment" -->
+  * rate  <!-- .element: class="fragment" -->
+  * trend  <!-- .element: class="fragment" -->
+* real-time ou summary à la fin  <!-- .element: class="fragment" -->
 
 ---
 
 # Mise en application
 
-script actuel :
-* config par type de device
-* calcul de débit que le test va exercer (en fonction du nombre de devices, de la config, ...)
-* setup identifiants
-* vu pour simuler un Edge via son testId
-* setup en JSON
-* sleep pour mix vu+constant
-* metriques +rates custom
-* quelques métrics + rates (429, total de données envoyées, ...)
-* de la config pour paramétrer nos runners selon cibles de débit
+* globalement OK ✅  <!-- .element: class="fragment" -->
+* quelques problèmes 😬  <!-- .element: class="fragment" -->
 
-* aucun executor pour notre use-case : couplage VU-device + sleep-itérations
-choix executor : ramping vu + sleep pour obtenir : constant arrival rate par vu
+---
 
-bug counters pour le real-time
-extension k6, bidouille dans les dashboards Grafana (compliqué), ou just Pandas (Python yay!)
+## Problème d'Executor
+
+* Ramping VUs : simule le démarrage progressif des devices  <!-- .element: class="fragment" -->
+  * mais chaque VU tabasse, ce qu'on ne veut pas  <!-- .element: class="fragment" -->
+* Ramping Arrival rate : simule qu'il y a de plus en plus de requêtes  <!-- .element: class="fragment" -->
+  * mais ne nous renseigne pas directement sur le nombre de devices  <!-- .element: class="fragment" -->
+* solution : ramping VUs + sleeps sales !  <!-- .element: class="fragment" -->
+* résultat : constant arrival rate par VU  <!-- .element: class="fragment" -->
+
+---
+
+## Problème de dashboard
+
+* k6 par Grafana, référence de l'Observabilité  <!-- .element: class="fragment" -->
+* plein d'intégrations real-time, mais pas dans Grafana (non-Cloud) !  <!-- .element: class="fragment" -->
+* bricolage d'un dashboard, malaxage des données, ...  <!-- .element: class="fragment" -->
+* on s'attendait à mieux  <!-- .element: class="fragment" -->
+
+---
+
+## Problème de Counter
+
+* le code incrémente des compteurs (métriques)  <!-- .element: class="fragment" -->
+* la summary à la fin est bon  <!-- .element: class="fragment" -->
+* le CSV real-time contient des lignes :  <!-- .element: class="fragment" -->
+  * la valeur de l'incrément, pas son cumul  <!-- .element: class="fragment" -->
+* ce n'est pas un bug ("c'est une feature") : #1340  <!-- .element: class="fragment" -->
+* Grafana n'est pas fait pour faire ça  <!-- .element: class="fragment" -->
+* mais Pandas 🐼 si !  <!-- .element: class="fragment" -->
+  * merci Python 💪🐍
+
+---
+
+## Résultat final
+
+* script de ~330 lignes
+* config par type de device à simuler
+* calcul du débit utile qui sera simulé
+* setup des données de test en JSON
+* chaque VU simule un device edge :
+  * mapping VU <--> device à base de "testId"
+  * authentification (config)
+  * préparation de la requête (config) et envoi
+  * sleep pour attendre un peu (config)
+  * update des métriques custom (429, erreurs, charge utile totale, ...)
+
+---
+
+## On veut voir du code !
+
+```javascript
+export function setup() {
+  "use strict";
+  const payloadSendRateBySecondByDevice = config.singleLogLineSize * config.numberLogsLineByPush / config.secondsBetweenEachPush;
+  const payloadSendRateBySecondTotal = payloadSendRateBySecondByDevice * config.numberDevicesToSimulate;
+  console.log("estimated payload rate = " + payloadSendRateBySecondTotal/1000 + "Ko/s total");
+  console.log("estimated payload rate = " + payloadSendRateBySecondTotal/1000000*3600 + "Mo/h total");
+
+  let vusState = {};
+  for (let i = 0; i < config.numberDevicesToSimulate; i++) {
+    vusState[(i+1).toString()] = {
+      // MUST BE STRICTLY JSON-SERIALIZABLE, SO ONLY NUMBERS/STRINGS/NULLS
+      last_log_line_count: -1,
+      deviceId: generateDeviceId(),
+      lastSuccessfulAuthentication: null,
+      authenticationDetails: null,
+    };
+  }
+  return vusState;
+}
+```
+
+---
+
+```javascript
+export default function (vusState) {
+  "use strict";
+  let vuId = exec.vu.idInTest;
+  let vuState = vusState[vuId.toString()];
+  if (!vuState.lastSuccessfulAuthentication) {
+    tryToAuthenticate(vuState);
+  } else {
+    sendLogs(vuState);
+  }
+}
+```
+
+---
+
+```javascript
+let authenticationSuccessfulCounter = new Counter("authentication_successful");
+let authenticationFailedCounter = new Counter("authentication_failed");
+let pushSuccessfulCounter = new Counter("push_successful");
+let pushFailed429Counter = new Counter("collector_429");
+let pushFailedOtherErrorsCounter = new Counter("collector_other_errors");
+let totalLogsSizePushedCounter = new Counter("total_logs_size_pushed");
+let durationPushToCollectorTrend = new Trend("duration_push_collector");
+let durationWaitingCollectorTrend = new Trend("waiting_push_collector");
+```
+
+---
+
+```javascript
+function sendLogs(vuState) {
+  "use strict";
+  if (vuState.lastPushDatetime) {
+    const elapsedTimeSinceLastPush = (new Date() - new Date(vuState.lastPushDatetime)) / 1000;  // re-hydrate the date
+    if (elapsedTimeSinceLastPush < config.secondsBetweenEachPush) {
+      sleep(0.1);
+      return;
+    }
+  } else {
+    ;
+  }
+
+  let body = JSON.stringify({}
+    // ...
+  );
+  let headers = {
+    // ...
+  };
+
+  let response = http.post(pushUrl, body, headers);
+  durationWaitingCollectorTrend.add(response.timings.waiting);  // Containing time (ms) spent waiting for server response.
+  durationPushToCollectorTrend.add(response.timings.duration);  // Total time for the request (ms).
+
+  if (response.status !== 200) {
+    if (response.status === 429) {
+      pushFailed429Counter.add(1);
+    } else {
+      pushFailedOtherErrorsCounter.add(1);
+    }
+  } else {
+    pushSuccessfulCounter.add(1);
+    totalLogsSizePushedCounter.add(config.singleLogLineSize * config.numberLogsLineByPush);
+  }
+  vuState.lastPushDatetime = new Date();
+}
+```
+
+---
+
+## Déploiment
 
 VM Azure : bastion, network, IPv6, NAT, group sec, ...
 
