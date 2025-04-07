@@ -31,6 +31,7 @@
   * outil de load testing ?  <!-- .element: class="fragment" -->
   * données réalistes ?  <!-- .element: class="fragment" -->
   * débit ?  <!-- .element: class="fragment" -->
+* let's go !
 
 ---
 
@@ -46,6 +47,7 @@
 * stats pendant et à la fin  <!-- .element: class="fragment" -->
 * pourquoi pas JMeter ? Java 🤮  <!-- .element: class="fragment" -->
 * pourquoi pas Locust ? Python + perf + stats 😥  <!-- .element: class="fragment" -->
+* ça semble OK
 
 ---
 
@@ -70,6 +72,8 @@ export default function () {
 ```shell
 $ k6 run script_minimal.js
 ```
+
+. . .
 
 [...]
 
@@ -265,39 +269,35 @@ let durationWaitingCollectorTrend = new Trend("waiting_push_collector");
 
 ```javascript
 function sendLogs(vuState) {
-  "use strict";
-  if (vuState.lastPushDatetime) {
-    const elapsedTimeSinceLastPush = (new Date() - new Date(vuState.lastPushDatetime)) / 1000;  // re-hydrate the date
-    if (elapsedTimeSinceLastPush < config.secondsBetweenEachPush) {
-      sleep(0.1);
-      return;
+    "use strict";
+    if (vuState.lastPushDatetime) {
+        const currentDatetime = new Date();
+        const elapsedTimeSinceLastPush = (currentDatetime - new Date(vuState.lastPushDatetime)) / 1000;  // re-hydrate the date
+        if (elapsedTimeSinceLastPush < config.secondsBetweenEachPush) {
+            sleep(0.1);
+        }
     }
-  } else {
-    ;
-  }
-
-  let body = JSON.stringify({}
+    let body = JSON.stringify({...});
+    let headers = {...};
+    let response = http.post(pushUrl, body, headers);
+    durationWaitingCollectorTrend.add(response.timings.waiting);
+    durationPushToCollectorTrend.add(response.timings.duration);
     // ...
-  );
-  let headers = {
+```
+
+---
+  
+```javascript
     // ...
-  };
-
-  let response = http.post(pushUrl, body, headers);
-  durationWaitingCollectorTrend.add(response.timings.waiting);  // Containing time (ms) spent waiting for server response.
-  durationPushToCollectorTrend.add(response.timings.duration);  // Total time for the request (ms).
-
-  if (response.status !== 200) {
     if (response.status === 429) {
-      pushFailed429Counter.add(1);
+        pushFailed429Counter.add(1);
+    } else if (response.status === 200) {
+        pushSuccessfulCounter.add(1);
+        totalLogsSizePushedCounter.add(config.singleLogLineSize * config.numberLogsLineByPush);
     } else {
-      pushFailedOtherErrorsCounter.add(1);
+        pushFailedOtherErrorsCounter.add(1);
     }
-  } else {
-    pushSuccessfulCounter.add(1);
-    totalLogsSizePushedCounter.add(config.singleLogLineSize * config.numberLogsLineByPush);
-  }
-  vuState.lastPushDatetime = new Date();
+    vuState.lastPushDatetime = new Date();
 }
 ```
 
@@ -305,11 +305,22 @@ function sendLogs(vuState) {
 
 ## Déploiment
 
-VM Azure : bastion, network, IPv6, NAT, group sec, ...
+* simuler 500 devices ==> 500 connexions TCP
+* j'ai pas 500 ordinateurs à travers le monde, mais Microsoft oui
+* création d'une VM manuelle, template, az-cli
+* il faut pourvoir se SSH dessus ==> network + bastion
+* network group sec pénibles
+* bastion cher + pas d'outbound
+* IPv4 en nombre limité ==> NAT requis
+* IPv6 pas supporté au niveau du NAT
+* finalement on a payé pour avoir + d'IPv4
+* mais on n'aura pas 500 connections TCP
 
 ---
 
-## TODO
+# Résultats
+
+* on lance, on a des erreurs de partout à cause de la config
 
 ---
 
@@ -319,3 +330,7 @@ VM Azure : bastion, network, IPv6, NAT, group sec, ...
 * [la doc bien foutue de Grafana k6](https://grafana.com/docs/k6/)
   * [breakpoint testing](https://grafana.com/docs/k6/latest/testing-guides/test-types/breakpoint-testing/)
   * [JavaScript compatibility mode](https://grafana.com/docs/k6/latest/using-k6/javascript-typescript-compatibility-mode/)
+
+# Questions ?
+
+* n'oubliez pas le ROTI à la fin
