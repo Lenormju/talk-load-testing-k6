@@ -209,6 +209,7 @@ vus_max........................: 1      min=1       max=1
   * préparation de la requête (config) et envoi  <!-- .element: class="fragment" -->
   * sleep pour attendre un peu (config)  <!-- .element: class="fragment" -->
   * update des métriques custom (429, erreurs, charge utile totale, ...)  <!-- .element: class="fragment" -->
+* super résultat au final !
 
 ---
 
@@ -255,12 +256,12 @@ export default function (vusState) {
 
 ```javascript
 let authenticationSuccessfulCounter = new Counter("authentication_successful");
-let authenticationFailedCounter = new Counter("authentication_failed");
-let pushSuccessfulCounter = new Counter("push_successful");
-let pushFailed429Counter = new Counter("collector_429");
-let pushFailedOtherErrorsCounter = new Counter("collector_other_errors");
-let totalLogsSizePushedCounter = new Counter("total_logs_size_pushed");
-let durationPushToCollectorTrend = new Trend("duration_push_collector");
+let authenticationFailedCounter     = new Counter("authentication_failed");
+let pushSuccessfulCounter           = new Counter("push_successful");
+let pushFailed429Counter            = new Counter("collector_429");
+let pushFailedOtherErrorsCounter    = new Counter("collector_other_errors");
+let totalLogsSizePushedCounter      = new Counter("total_logs_size_pushed");
+let durationPushToCollectorTrend  = new Trend("duration_push_collector");
 let durationWaitingCollectorTrend = new Trend("waiting_push_collector");
 ```
 
@@ -319,8 +320,22 @@ function sendLogs(vuState) {
 
 # Résultats
 
-* on lance, on a des erreurs de partout à cause de la config  <!-- .element: class="fragment" -->
-* TODO
+* on lance, plein d'erreurs de config  <!-- .element: class="fragment" -->
+* on relance, on commence à avoir des résultats
+* on re-relance, après avoir modifié quelques trucs faciles
+* on analyse
+
+---
+
+<!-- .slide: data-background-image="results_full_dashboard.png" -->
+
+---
+
+![](./results_plot_duration.png)
+
+---
+
+![](./results_plot_errors_vus.png)
 
 ---
 
