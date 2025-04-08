@@ -209,7 +209,7 @@ vus_max........................: 1      min=1       max=1
   * préparation de la requête (config) et envoi  <!-- .element: class="fragment" -->
   * sleep pour attendre un peu (config)  <!-- .element: class="fragment" -->
   * update des métriques custom (429, erreurs, charge utile totale, ...)  <!-- .element: class="fragment" -->
-* super résultat au final !
+* super résultat au final !  <!-- .element: class="fragment" -->
 
 ---
 
@@ -321,9 +321,9 @@ function sendLogs(vuState) {
 # Résultats
 
 * on lance, plein d'erreurs de config  <!-- .element: class="fragment" -->
-* on relance, on commence à avoir des résultats
-* on re-relance, après avoir modifié quelques trucs faciles
-* on analyse
+* on relance, on commence à avoir des résultats  <!-- .element: class="fragment" -->
+* on re-relance, après avoir modifié quelques trucs faciles  <!-- .element: class="fragment" -->
+* on analyse  <!-- .element: class="fragment" -->
 
 ---
 
