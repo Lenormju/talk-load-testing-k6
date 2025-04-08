@@ -31,7 +31,7 @@
   * outil de load testing ?  <!-- .element: class="fragment" -->
   * données réalistes ?  <!-- .element: class="fragment" -->
   * débit ?  <!-- .element: class="fragment" -->
-* let's go !
+* let's go !  <!-- .element: class="fragment" -->
 
 ---
 
@@ -47,7 +47,7 @@
 * stats pendant et à la fin  <!-- .element: class="fragment" -->
 * pourquoi pas JMeter ? Java 🤮  <!-- .element: class="fragment" -->
 * pourquoi pas Locust ? Python + perf + stats 😥  <!-- .element: class="fragment" -->
-* ça semble OK
+* ça semble OK  <!-- .element: class="fragment" -->
 
 ---
 
@@ -73,8 +73,6 @@ export default function () {
 $ k6 run script_minimal.js
 ```
 
-. . .
-
 [...]
 
 ```
@@ -95,6 +93,7 @@ iterations.....................: 10     0.879973/s
 vus............................: 1      min=1       max=1
 vus_max........................: 1      min=1       max=1
 ```
+<!-- .element: class="fragment" -->
 
 ---
 
@@ -194,22 +193,22 @@ vus_max........................: 1      min=1       max=1
 * ce n'est pas un bug ("c'est une feature") : #1340  <!-- .element: class="fragment" -->
 * Grafana n'est pas fait pour faire ça  <!-- .element: class="fragment" -->
 * mais Pandas 🐼 si !  <!-- .element: class="fragment" -->
-  * merci Python 💪🐍
+  * merci Python 💪🐍  <!-- .element: class="fragment" -->
 
 ---
 
 ## Résultat final
 
-* script de ~330 lignes
-* config par type de device à simuler
-* calcul du débit utile qui sera simulé
-* setup des données de test en JSON
-* chaque VU simule un device edge :
-  * mapping VU <--> device à base de "testId"
-  * authentification (config)
-  * préparation de la requête (config) et envoi
-  * sleep pour attendre un peu (config)
-  * update des métriques custom (429, erreurs, charge utile totale, ...)
+* script de ~330 lignes  <!-- .element: class="fragment" -->
+* config par type de device à simuler  <!-- .element: class="fragment" -->
+* calcul du débit utile qui sera simulé  <!-- .element: class="fragment" -->
+* setup des données de test en JSON  <!-- .element: class="fragment" -->
+* chaque VU simule un device edge :  <!-- .element: class="fragment" -->
+  * mapping VU <--> device à base de "testId"  <!-- .element: class="fragment" -->
+  * authentification (config)  <!-- .element: class="fragment" -->
+  * préparation de la requête (config) et envoi  <!-- .element: class="fragment" -->
+  * sleep pour attendre un peu (config)  <!-- .element: class="fragment" -->
+  * update des métriques custom (429, erreurs, charge utile totale, ...)  <!-- .element: class="fragment" -->
 
 ---
 
@@ -305,22 +304,23 @@ function sendLogs(vuState) {
 
 ## Déploiment
 
-* simuler 500 devices ==> 500 connexions TCP
-* j'ai pas 500 ordinateurs à travers le monde, mais Microsoft oui
-* création d'une VM manuelle, template, az-cli
-* il faut pourvoir se SSH dessus ==> network + bastion
-* network group sec pénibles
-* bastion cher + pas d'outbound
-* IPv4 en nombre limité ==> NAT requis
-* IPv6 pas supporté au niveau du NAT
-* finalement on a payé pour avoir + d'IPv4
-* mais on n'aura pas 500 connections TCP
+* simuler 500 devices ==> 500 connexions TCP  <!-- .element: class="fragment" -->
+* j'ai pas 500 ordinateurs à travers le monde, mais Microsoft oui  <!-- .element: class="fragment" -->
+* création d'une VM manuelle, template, az-cli  <!-- .element: class="fragment" -->
+* il faut pourvoir se SSH dessus ==> network + bastion  <!-- .element: class="fragment" -->
+* network group sec pénibles  <!-- .element: class="fragment" -->
+* bastion cher + pas d'outbound  <!-- .element: class="fragment" -->
+* IPv4 en nombre limité ==> NAT requis  <!-- .element: class="fragment" -->
+* IPv6 pas supporté au niveau du NAT  <!-- .element: class="fragment" -->
+* finalement on a payé pour avoir + d'IPv4  <!-- .element: class="fragment" -->
+* mais on n'aura pas 500 connections TCP  <!-- .element: class="fragment" -->
 
 ---
 
 # Résultats
 
-* on lance, on a des erreurs de partout à cause de la config
+* on lance, on a des erreurs de partout à cause de la config  <!-- .element: class="fragment" -->
+* TODO
 
 ---
 
@@ -330,6 +330,8 @@ function sendLogs(vuState) {
 * [la doc bien foutue de Grafana k6](https://grafana.com/docs/k6/)
   * [breakpoint testing](https://grafana.com/docs/k6/latest/testing-guides/test-types/breakpoint-testing/)
   * [JavaScript compatibility mode](https://grafana.com/docs/k6/latest/using-k6/javascript-typescript-compatibility-mode/)
+
+---
 
 # Questions ?
 
