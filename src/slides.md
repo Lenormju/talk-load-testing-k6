@@ -21,16 +21,40 @@
 
 ---
 
+# Test de charge ?
+
+* 2 visions du test de charge :  <!-- .element: class="fragment" -->
+  * test de perf : à quelle vitesse ça va ?  <!-- .element: class="fragment" -->
+  * test de charge : est-ce que ça va assez vite ?  <!-- .element: class="fragment" -->
+* spike : survivre à un pic de charge  <!-- .element: class="fragment" -->
+* stress : survivre à une charge élevée pendant un temps moyen  <!-- .element: class="fragment" -->
+* soak/endurance : survivre à une très longue durée  <!-- .element: class="fragment" -->
+
+---
+
+# Comment produire de la charge ?
+
+* applicatif Windows installé sur les devices  <!-- .element: class="fragment" -->
+* n'existe pas (encore) pour Linux  <!-- .element: class="fragment" -->
+* pas vraiment pilotables (il faut configurer un soft annexe ...)  <!-- .element: class="fragment" -->
+* pas de reporting joli pour les erreurs  <!-- .element: class="fragment" -->
+* on ne souhaite pas tester les devices, juste notre plateforme <!-- .element: class="fragment" -->
+* donc seulement le HTTP qui est envoyé, pas besoin de s'encombrer <!-- .element: class="fragment" -->
+
+---
+
 # Le plan
 
+* objectif = "mesurer l'absorption des données"  <!-- .element: class="fragment" -->
 * quelle est notre archi ?  <!-- .element: class="fragment" -->
-* qu'est-ce qu'on suspecte qui va péter ?  <!-- .element: class="fragment" -->
-* qu'est-ce qu'on veut tester ? (fonctionnel / SLA)  <!-- .element: class="fragment" -->
+* qu'est-ce qu'on veut vérifier ? (fonctionnel / SLA)  <!-- .element: class="fragment" -->
+* qu'est-ce qu'on suspecte qui va casser ?  <!-- .element: class="fragment" -->
 * quels besoins techniques pour les tests ?  <!-- .element: class="fragment" -->
-  * VMs + script de provisionnement ?  <!-- .element: class="fragment" -->
+  * vrai ou fake device ?  <!-- .element: class="fragment" -->
   * outil de load testing ?  <!-- .element: class="fragment" -->
+  * VMs + script de provisionnement ?  <!-- .element: class="fragment" -->
   * données réalistes ?  <!-- .element: class="fragment" -->
-  * débit ?  <!-- .element: class="fragment" -->
+  * débit réaliste ?  <!-- .element: class="fragment" -->
 * let's go !  <!-- .element: class="fragment" -->
 
 ---
@@ -97,14 +121,14 @@ vus_max........................: 1      min=1       max=1
 
 ---
 
-## Cycle de vie d'un test
+## Cycle de vie d'un test k6
 
 * init (js)  <!-- .element: class="fragment" -->
 * setup (JSON)  <!-- .element: class="fragment" -->
 * run  <!-- .element: class="fragment" -->
 * teardown  <!-- .element: class="fragment" -->
 
-![https://grafana.com/media/docs/k6-oss/lifecycle.png](./k6_lifecycle.png)  <!-- .element: class="fragment" -->
+![https://grafana.com/media/docs/k6-oss/lifecycle.png](./k6_lifecycle.png)  <!-- .element: class="fragment" width="540px" -->
 
 ---
 
@@ -166,11 +190,12 @@ vus_max........................: 1      min=1       max=1
 
 ## Problème d'Executor
 
+* notre besoin : allumage progressif des devices, chacun à charge constante  <!-- .element: class="fragment" -->
 * Ramping VUs : simule le démarrage progressif des devices  <!-- .element: class="fragment" -->
   * mais chaque VU tabasse, ce qu'on ne veut pas  <!-- .element: class="fragment" -->
 * Ramping Arrival rate : simule qu'il y a de plus en plus de requêtes  <!-- .element: class="fragment" -->
   * mais ne nous renseigne pas directement sur le nombre de devices  <!-- .element: class="fragment" -->
-* solution : ramping VUs + sleeps sales !  <!-- .element: class="fragment" -->
+* solution : ramping VUs + des sleep !  <!-- .element: class="fragment" -->
 * résultat : constant arrival rate par VU  <!-- .element: class="fragment" -->
 
 ---
@@ -179,7 +204,7 @@ vus_max........................: 1      min=1       max=1
 
 * k6 par Grafana, référence de l'Observabilité  <!-- .element: class="fragment" -->
 * plein d'intégrations real-time, mais pas dans Grafana (non-Cloud) !  <!-- .element: class="fragment" -->
-* bricolage d'un dashboard, malaxage des données, ...  <!-- .element: class="fragment" -->
+* bricolage d'un dashboard, malaxage des données (Prometheus vers Grafana), ...  <!-- .element: class="fragment" -->
 * on s'attendait à mieux  <!-- .element: class="fragment" -->
 
 ---
@@ -197,18 +222,22 @@ vus_max........................: 1      min=1       max=1
 
 ---
 
-## Résultat final
+## setup terminé
 
-* script de ~330 lignes  <!-- .element: class="fragment" -->
+* script k6 de ~330 lignes  <!-- .element: class="fragment" -->
 * config par type de device à simuler  <!-- .element: class="fragment" -->
 * calcul du débit utile qui sera simulé  <!-- .element: class="fragment" -->
 * setup des données de test en JSON  <!-- .element: class="fragment" -->
 * chaque VU simule un device edge :  <!-- .element: class="fragment" -->
-  * mapping VU <--> device à base de "testId"  <!-- .element: class="fragment" -->
+  * assignation d'identités (devices) aux VUs (k6 pas conçu pour)  <!-- .element: class="fragment" -->
   * authentification (config)  <!-- .element: class="fragment" -->
   * préparation de la requête (config) et envoi  <!-- .element: class="fragment" -->
   * sleep pour attendre un peu (config)  <!-- .element: class="fragment" -->
   * update des métriques custom (429, erreurs, charge utile totale, ...)  <!-- .element: class="fragment" -->
+* côté back :  <!-- .element: class="fragment" -->
+  * script pour seeder la base de données  <!-- .element: class="fragment" -->
+  * dashboards pour mesurer côté back ce qu'il se passe  <!-- .element: class="fragment" -->
+  * procédures de cleanup à la fin  <!-- .element: class="fragment" -->
 * super résultat au final !  <!-- .element: class="fragment" -->
 
 ---
@@ -305,10 +334,11 @@ function sendLogs(vuState) {
 
 ## Déploiment
 
+* toute une aventure !  <!-- .element: class="fragment" -->
 * simuler 500 devices ==> 500 connexions TCP  <!-- .element: class="fragment" -->
 * j'ai pas 500 ordinateurs à travers le monde, mais Microsoft oui  <!-- .element: class="fragment" -->
-* création d'une VM manuelle, template, az-cli  <!-- .element: class="fragment" -->
-* il faut pourvoir se SSH dessus ==> network + bastion  <!-- .element: class="fragment" -->
+* création d'une VM Linux manuelle, template, az-cli  <!-- .element: class="fragment" -->
+* il faut pouvoir se SSH dessus ==> network + bastion  <!-- .element: class="fragment" -->
 * network group sec pénibles  <!-- .element: class="fragment" -->
 * bastion cher + pas d'outbound  <!-- .element: class="fragment" -->
 * IPv4 en nombre limité ==> NAT requis  <!-- .element: class="fragment" -->
@@ -321,7 +351,7 @@ function sendLogs(vuState) {
 # Résultats
 
 * on lance, plein d'erreurs de config  <!-- .element: class="fragment" -->
-* on relance, on commence à avoir des résultats  <!-- .element: class="fragment" -->
+* on relance, on commence à avoir des résultats, et on ajuste le débit  <!-- .element: class="fragment" -->
 * on re-relance, après avoir modifié quelques trucs faciles  <!-- .element: class="fragment" -->
 * on analyse  <!-- .element: class="fragment" -->
 
@@ -339,9 +369,20 @@ function sendLogs(vuState) {
 
 ---
 
+# Conclusions
+
+* on n'est pas prêts, mais on le sait  <!-- .element: class="fragment" -->
+* et on sait mesurer si on le sera  <!-- .element: class="fragment" -->
+* l'outillage n'a pas été si bloquant  <!-- .element: class="fragment" -->
+* le plus compliqué à été de savoir ce qu'on voulait simuler  <!-- .element: class="fragment" -->
+* pour savoir ce qu'il fallait mesurer  <!-- .element: class="fragment" -->
+* "qui peut le + peut le - !"  <!-- .element: class="fragment" -->
+
+---
+
 ## Sources
 
-* moi
+* Guillaume CHALONS et Julien LENORMAND
 * [la doc bien foutue de Grafana k6](https://grafana.com/docs/k6/)
   * [breakpoint testing](https://grafana.com/docs/k6/latest/testing-guides/test-types/breakpoint-testing/)
   * [JavaScript compatibility mode](https://grafana.com/docs/k6/latest/using-k6/javascript-typescript-compatibility-mode/)
@@ -350,4 +391,4 @@ function sendLogs(vuState) {
 
 # Questions ?
 
-* n'oubliez pas le ROTI à la fin
+* (ou remarques, ou doutes, ou ...)
