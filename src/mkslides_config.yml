@@ -1,6 +1,8 @@
 slides:
-  theme: "white"  # custom CSS filepath/URL, or https://revealjs.com/themes/
+#  theme: "white"  # custom CSS filepath/URL, or https://revealjs.com/themes/
+  theme: "./src/theme/kaizen_logo.css"  # custom CSS filepath/URL, or https://revealjs.com/themes/
   highlight_theme: "stackoverflow-light"  # custom CSS filepath/URL, or https://highlightjs.org/examples
+  favicon: "./src/theme/kaizen_logo.png"
 revealjs:  # https://revealjs.com/config/
   height: 1080
   width: 1920
